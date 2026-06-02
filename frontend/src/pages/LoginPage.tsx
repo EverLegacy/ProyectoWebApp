@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { datadogLogs } from '@datadog/browser-logs';
 
 const LoginPage: FC = () => {
   const [email, setEmail]       = useState('');
@@ -10,8 +11,14 @@ const LoginPage: FC = () => {
 
   async function handleSubmit() {
     const ok = await login(email, password);
-    if (ok) navigate('/dashboard');
+if (ok) {
+    datadogLogs.logger.info('LOGIN_SUCCESS', {
+      email
+    });
+
+    navigate('/dashboard');
   }
+}
 
   return (
     <div style={{

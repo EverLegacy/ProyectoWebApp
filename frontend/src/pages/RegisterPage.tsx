@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { datadogLogs } from '@datadog/browser-logs';
 
 const RegisterPage: FC = () => {
   const [name, setName]         = useState('');
@@ -11,8 +12,15 @@ const RegisterPage: FC = () => {
 
   async function handleSubmit() {
     const ok = await register(name, email, password);
-    if (ok) navigate('/login');
+  if (ok) {
+    datadogLogs.logger.info('USER_REGISTERED', {
+      name,
+      email
+    });
+
+    navigate('/login');
   }
+}
 
   return (
     <div style={{

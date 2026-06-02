@@ -10,6 +10,16 @@ async function listRewards(_req, res) {
   }
 }
 
+function generateCode(rewardId, cardId) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  // Format: PTS-XXXXXXXX-<rewardId><cardId>
+  return `PTS-${code}-${rewardId}${cardId}`;
+}
+
 async function redeemReward(req, res) {
   const { rewardId } = req.body;
   try {
@@ -25,6 +35,8 @@ async function redeemReward(req, res) {
     if (card.points_balance < reward.points_cost)
       return res.status(400).json({ error: 'Insufficient points' });
 
+    const code = generateCode(rewardId, card.id);
+
     await pool.query(
       'UPDATE loyalty_cards SET points_balance = points_balance - $1 WHERE id=$2',
       [reward.points_cost, card.id]
@@ -38,10 +50,15 @@ async function redeemReward(req, res) {
     await ActivityLog.create({
       userId: req.user.id,
       action: 'redeem',
-      metadata: { rewardId, pointsSpent: reward.points_cost },
+      metadata: { rewardId, pointsSpent: reward.points_cost, code },
     });
 
-    res.json({ message: 'Reward redeemed successfully' });
+    res.json({
+      message: 'Reward redeemed successfully',
+      code,
+      reward: reward.name,
+      pointsSpent: reward.points_cost,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

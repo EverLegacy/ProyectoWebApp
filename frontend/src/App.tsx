@@ -7,6 +7,8 @@ import DashboardPage    from './pages/DashboardPage';
 import RewardsPage      from './pages/RewardsPage';
 import TransactionsPage from './pages/TransactionsPage';
 
+
+
 const App: FC = () => (
   <BrowserRouter>
     <Navbar />

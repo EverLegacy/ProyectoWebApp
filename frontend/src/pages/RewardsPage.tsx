@@ -2,13 +2,21 @@ import { FC, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Reward, LoyaltyCard } from '../types';
+import { datadogLogs } from '@datadog/browser-logs';
+
+interface RedeemResult {
+  code: string;
+  reward: string;
+  pointsSpent: number;
+}
 
 const RewardsPage: FC = () => {
-  const [rewards, setRewards]   = useState<Reward[]>([]);
-  const [card, setCard]         = useState<LoyaltyCard | null>(null);
-  const [loading, setLoading]   = useState(true);
+  const [rewards, setRewards]     = useState<Reward[]>([]);
+  const [card, setCard]           = useState<LoyaltyCard | null>(null);
+  const [loading, setLoading]     = useState(true);
   const [redeeming, setRedeeming] = useState<number | null>(null);
-  const [msg, setMsg]           = useState<{ text: string; ok: boolean } | null>(null);
+  const [result, setResult]       = useState<RedeemResult | null>(null);
+  const [error, setError]         = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,14 +33,23 @@ const RewardsPage: FC = () => {
 
   async function redeem(reward: Reward) {
     setRedeeming(reward.id);
-    setMsg(null);
+    setResult(null);
+    setError(null);
     try {
-      await api.post('/rewards/redeem', { rewardId: reward.id });
-      setMsg({ text: `¡Canjeaste "${reward.name}" exitosamente!`, ok: true });
+      const { data } = await api.post<RedeemResult>('/rewards/redeem', { rewardId: reward.id });
+      setResult(data);
+
+datadogLogs.logger.info('REWARD_REDEEMED', {
+  rewardId: reward.id,
+  rewardName: reward.name,
+  pointsSpent: data.pointsSpent,
+  code: data.code
+});
+      // Refresh balance
       const cRes = await api.get<LoyaltyCard>('/points/balance');
       setCard(cRes.data);
     } catch {
-      setMsg({ text: 'No tienes suficientes puntos.', ok: false });
+      setError('No tienes suficientes puntos.');
     } finally {
       setRedeeming(null);
     }
@@ -46,6 +63,8 @@ const RewardsPage: FC = () => {
 
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 24px' }}>
+
+      {/* Header */}
       <div className="fade-up" style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 4 }}>Catálogo</p>
@@ -59,15 +78,59 @@ const RewardsPage: FC = () => {
         </div>
       </div>
 
-      {msg && (
+      {/* Error banner */}
+      {error && (
         <div className="fade-up" style={{
-          background: msg.ok ? 'rgba(82,196,138,0.1)' : 'rgba(224,82,82,0.1)',
-          border: `1px solid ${msg.ok ? 'rgba(82,196,138,0.3)' : 'rgba(224,82,82,0.3)'}`,
-          borderRadius: 8, color: msg.ok ? 'var(--success)' : 'var(--danger)',
-          fontSize: 13, padding: '12px 16px', marginBottom: 24,
-        }}>{msg.text}</div>
+          background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)',
+          borderRadius: 8, color: 'var(--danger)', fontSize: 13,
+          padding: '12px 16px', marginBottom: 24,
+        }}>{error}</div>
       )}
 
+      {/* Redemption code modal */}
+      {result && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 200, padding: 24,
+        }}>
+          <div className="card fade-up" style={{ width: '100%', maxWidth: 420, padding: 36, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+            <h2 style={{ fontSize: 24, marginBottom: 8 }}>¡Canje exitoso!</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>
+              Canjeaste <strong style={{ color: 'var(--text)' }}>{result.reward}</strong> por{' '}
+              <strong style={{ color: 'var(--gold)' }}>{result.pointsSpent} puntos</strong>
+            </p>
+
+            {/* The code */}
+            <div style={{
+              background: 'var(--bg3)', border: '1px solid var(--gold)',
+              borderRadius: 12, padding: '20px 24px', marginBottom: 24,
+            }}>
+              <p style={{ color: 'var(--muted)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Tu código de canje
+              </p>
+              <p style={{
+                fontFamily: 'Syne', fontSize: 22, fontWeight: 800,
+                color: 'var(--gold)', letterSpacing: '0.08em',
+              }}>
+                {result.code}
+              </p>
+            </div>
+
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 28, lineHeight: 1.6 }}>
+              Presenta este código en cualquier tienda participante para hacer válida tu recompensa.
+              El código es de un solo uso.
+            </p>
+
+            <button className="btn-gold" onClick={() => setResult(null)}>
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rewards list */}
       {rewards.length === 0 ? (
         <div className="card fade-up-2" style={{ textAlign: 'center', padding: 48 }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>🎁</div>
@@ -82,9 +145,11 @@ const RewardsPage: FC = () => {
                 background: 'var(--bg2)', border: '1px solid var(--border)',
                 borderRadius: 16, padding: '20px 24px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-                opacity: canAfford ? 1 : 0.6,
-                transition: 'border-color 0.2s',
-              }}>
+                opacity: canAfford ? 1 : 0.55,
+                transition: 'border-color 0.2s, opacity 0.3s',
+              }}
+                onMouseEnter={e => canAfford && (e.currentTarget.style.borderColor = 'var(--gold)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                     <h3 style={{ fontSize: 16 }}>{r.name}</h3>

@@ -21,3 +21,20 @@ INSERT INTO rewards (name, description, points_cost, stock) VALUES
   ('Vale gasolina $50',     'Vale de $50 para gasolina en Gasolinería Norte',                  800,  10),
   ('Canasta básica',        'Canasta con leche, huevo, pan y aceite',                         1500,   5)
 ON CONFLICT DO NOTHING;
+
+
+INSERT INTO TRANSACTIONS (card_id, store_id, amount, points_earned) VALUES
+  (1, 1, 50.00, 50)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO LOYALTY_CARDS (user_id, card_number, points_balance, tier) VALUES
+  (1, '1234-5678-9012-3456', 50, 'bronze')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO REWARDS (name, description, points_cost, stock) VALUES
+  ('Café gratis', 'Un café americano o cappuccino en cualquier tienda participante', 200, 50)
+ON CONFLICT DO NOTHING;
+
+INSERT into redemptions (card_id, reward_id, status) VALUES
+  (1, 1, 'pending')
+ON CONFLICT DO NOTHING;

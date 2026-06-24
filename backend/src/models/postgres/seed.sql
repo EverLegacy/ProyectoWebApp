@@ -1,6 +1,6 @@
 -- Users first
-INSERT INTO users (name, email, password_hash, phone) VALUES
-  ('Usuario Demo', 'demo@loyaltyapp.com', '$2b$10$placeholder', '477-000-0000')
+INSERT INTO users (name, email, password_hash) VALUES
+  ('Usuario Demo', 'demo@loyaltyapp.com', '$2b$10$placeholder')
 ON CONFLICT DO NOTHING;
 
 -- Stores

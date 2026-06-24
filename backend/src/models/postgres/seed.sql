@@ -1,7 +1,7 @@
 -- Users first
 INSERT INTO users (name, email, password_hash) VALUES
   ('Usuario Demo', 'demo@loyaltyapp.com', '$2b$10$placeholder')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name;
 
 -- Stores
 INSERT INTO stores (name, location, category) VALUES
@@ -29,7 +29,7 @@ ON CONFLICT DO NOTHING;
 -- Loyalty cards (depends on users existing)
 INSERT INTO loyalty_cards (user_id, card_number, points_balance, tier) VALUES
   (1, '1234-5678-9012-3456', 50, 'bronze')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (card_number) DO UPDATE SET points_balance = EXCLUDED.points_balance;
 
 -- Transactions (depends on loyalty_cards AND stores existing)
 INSERT INTO transactions (card_id, store_id, amount, points_earned) VALUES

@@ -6,6 +6,8 @@ import RegisterPage     from './pages/RegisterPage';
 import DashboardPage    from './pages/DashboardPage';
 import RewardsPage      from './pages/RewardsPage';
 import TransactionsPage from './pages/TransactionsPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage  from './pages/ResetPasswordPage';
 
 
 
@@ -13,12 +15,14 @@ const App: FC = () => (
   <BrowserRouter>
     <Navbar />
     <Routes>
-      <Route path="/"             element={<Navigate to="/dashboard" replace />} />
-      <Route path="/login"        element={<LoginPage />} />
-      <Route path="/register"     element={<RegisterPage />} />
-      <Route path="/dashboard"    element={<DashboardPage />} />
-      <Route path="/rewards"      element={<RewardsPage />} />
-      <Route path="/transactions" element={<TransactionsPage />} />
+      <Route path="/"               element={<Navigate to="/dashboard" replace />} />
+      <Route path="/login"          element={<LoginPage />} />
+      <Route path="/register"       element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      <Route path="/dashboard"      element={<DashboardPage />} />
+      <Route path="/rewards"        element={<RewardsPage />} />
+      <Route path="/transactions"   element={<TransactionsPage />} />
     </Routes>
   </BrowserRouter>
 );

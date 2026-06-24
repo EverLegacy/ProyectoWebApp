@@ -2,7 +2,7 @@ import { FC, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Reward, LoyaltyCard } from '../types';
-import { datadogLogs } from '@datadog/browser-logs';
+import { logEvent } from '../lib/datadog';
 
 interface RedeemResult {
   code: string;
@@ -15,6 +15,7 @@ const RewardsPage: FC = () => {
   const [card, setCard]           = useState<LoyaltyCard | null>(null);
   const [loading, setLoading]     = useState(true);
   const [redeeming, setRedeeming] = useState<number | null>(null);
+  const [confirming, setConfirming] = useState<Reward | null>(null); 
   const [result, setResult]       = useState<RedeemResult | null>(null);
   const [error, setError]         = useState<string | null>(null);
   const navigate = useNavigate();
@@ -31,21 +32,23 @@ const RewardsPage: FC = () => {
     }).finally(() => setLoading(false));
   }, [navigate]);
 
-  async function redeem(reward: Reward) {
+  async function confirmRedeem() {
+    if (!confirming) return;
+    const reward = confirming;
     setRedeeming(reward.id);
     setResult(null);
     setError(null);
     try {
       const { data } = await api.post<RedeemResult>('/rewards/redeem', { rewardId: reward.id });
-      setResult(data);
+      setConfirming(null); 
+      setResult(data);     
 
-datadogLogs.logger.info('REWARD_REDEEMED', {
-  rewardId: reward.id,
-  rewardName: reward.name,
-  pointsSpent: data.pointsSpent,
-  code: data.code
-});
-      // Refresh balance
+      logEvent('REWARD_REDEEMED', {
+        rewardId: reward.id,
+        rewardName: reward.name,
+        pointsSpent: data.pointsSpent,
+      });
+      
       const cRes = await api.get<LoyaltyCard>('/points/balance');
       setCard(cRes.data);
     } catch {
@@ -87,9 +90,47 @@ datadogLogs.logger.info('REWARD_REDEEMED', {
         }}>{error}</div>
       )}
 
+      {/* Wizard step 2: confirmation */}
+      {confirming && (
+        <div data-testid="redeem-confirm-modal" style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 200, padding: 24,
+        }}>
+          <div className="card fade-up" style={{ width: '100%', maxWidth: 420, padding: 36, textAlign: 'center' }}>
+            <h2 style={{ fontSize: 22, marginBottom: 8 }}>¿Confirmas el canje?</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 20 }}>
+              Vas a canjear <strong style={{ color: 'var(--text)' }}>{confirming.name}</strong>
+            </p>
+            <div style={{
+              background: 'var(--bg3)', borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+              display: 'flex', justifyContent: 'space-between', fontSize: 13,
+            }}>
+              <span style={{ color: 'var(--muted)' }}>Costo</span>
+              <strong data-testid="redeem-confirm-cost" style={{ color: 'var(--gold)' }}>{confirming.points_cost} pts</strong>
+            </div>
+            <div style={{
+              background: 'var(--bg3)', borderRadius: 12, padding: '16px 20px', marginBottom: 24,
+              display: 'flex', justifyContent: 'space-between', fontSize: 13,
+            }}>
+              <span style={{ color: 'var(--muted)' }}>Saldo después del canje</span>
+              <strong>{(card?.points_balance ?? 0) - confirming.points_cost} pts</strong>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button data-testid="redeem-cancel" className="btn-outline" onClick={() => setConfirming(null)} style={{ flex: 1 }}>
+                Cancelar
+              </button>
+              <button data-testid="redeem-confirm" className="btn-gold" onClick={confirmRedeem} disabled={redeeming === confirming.id} style={{ flex: 1 }}>
+                {redeeming === confirming.id ? '...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Redemption code modal */}
       {result && (
-        <div style={{
+        <div data-testid="redeem-success-modal" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 200, padding: 24,
@@ -123,7 +164,7 @@ datadogLogs.logger.info('REWARD_REDEEMED', {
               El código es de un solo uso.
             </p>
 
-            <button className="btn-gold" onClick={() => setResult(null)}>
+            <button data-testid="redeem-success-close" className="btn-gold" onClick={() => setResult(null)}>
               Entendido
             </button>
           </div>
@@ -141,7 +182,7 @@ datadogLogs.logger.info('REWARD_REDEEMED', {
           {rewards.map((r) => {
             const canAfford = (card?.points_balance ?? 0) >= r.points_cost;
             return (
-              <div key={r.id} style={{
+              <div key={r.id} data-testid={`reward-card-${r.id}`} style={{
                 background: 'var(--bg2)', border: '1px solid var(--border)',
                 borderRadius: 16, padding: '20px 24px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
@@ -166,8 +207,9 @@ datadogLogs.logger.info('REWARD_REDEEMED', {
                     {r.points_cost.toLocaleString()} pts
                   </p>
                   <button
+                    data-testid={`reward-redeem-${r.id}`}
                     className="btn-gold"
-                    onClick={() => redeem(r)}
+                    onClick={() => setConfirming(r)}
                     disabled={!canAfford || redeeming === r.id}
                     style={{ width: 'auto', padding: '8px 20px', fontSize: 12 }}>
                     {redeeming === r.id ? '...' : canAfford ? 'Canjear' : 'Sin puntos'}

@@ -1,0 +1,247 @@
+================================================================================
+CHECKLIST DE CUMPLIMIENTO — loyalty-app
+Logs · Métricas · TypeScript · Unit Tests · API REST
+================================================================================
+
+================================================================================
+11.1 LOGS — Los 6 puntos obligatorios
+================================================================================
+
+[✓] Logging estructurado en JSON (Winston backend / Datadog frontend)
+    Backend:  backend/src/logger/logger.ts
+    Frontend: frontend/src/lib/datadog.ts
+
+[✓] Niveles de log correctos: error, warn, info, debug
+    Backend:  backend/src/logger/logger.ts (logDebug, logInfo, logWarn, logError)
+              backend/src/middleware/requestLogger.ts (info/warn según statusCode)
+              backend/src/middleware/errorHandler.ts (error)
+              backend/src/middleware/auth.ts (warn/debug)
+              backend/src/infrastructure/mongo.ts (debug solo si MONGO_DEBUG=true)
+    Frontend: frontend/src/lib/datadog.ts (logEvent/info, logWarn, logError, logDebug)
+    Config:   backend/.env.example → LOG_LEVEL=info
+
+[✓] Correlation ID en cada request (trazabilidad end-to-end)
+    Backend:  backend/src/middleware/correlationId.ts
+              backend/src/middleware/requestLogger.ts (incluye correlationId)
+              backend/src/middleware/errorHandler.ts (incluye correlationId)
+    Frontend: frontend/src/lib/datadog.ts → getOrCreateCorrelationId()
+              frontend/src/services/api.ts → header X-Correlation-ID
+    Tests:    backend/src/controllers/api.test.ts (test correlation ID)
+
+[✓] Sin datos sensibles en logs (passwords, tokens, PII)
+    Backend:  backend/src/logger/redact.ts
+              backend/src/logger/logger.ts (redactFormat aplicado)
+              backend/src/middleware/auth.ts (NO loguea Authorization)
+              backend/src/infrastructure/mongo.ts (queries redactadas)
+    Frontend: frontend/src/lib/redact.ts
+              frontend/src/lib/datadog.ts (redactClientData en todos los logs)
+              frontend/src/pages/LoginPage.tsx (sin email en logs)
+              frontend/src/pages/RegisterPage.tsx (sin name/email en logs)
+              frontend/src/pages/RewardsPage.tsx (sin code en logs)
+    Tests:    backend/src/logger/redact.test.ts
+              frontend/src/lib/redact.test.ts
+
+[✓] Reporte de logs (DevOps)
+    Backend:  backend/src/config/loggingPolicy.ts → LOG_SHIPPING
+              backend/src/logger/logger.ts → stdout JSON (agente Datadog/CloudWatch)
+              backend/src/index.ts → dd-trace con logInjection
+    Frontend: frontend/src/lib/datadog.ts → Datadog Browser Logs (us5.datadoghq.com)
+              frontend/src/main.tsx → importa datadog al iniciar
+    Config:   backend/.env.example → DD_API_KEY, DD_AGENT_HOST (comentados)
+
+[✓] Retención de logs definida (30 días hot, 90 días cold)
+    Archivo:  backend/src/config/loggingPolicy.ts → LOG_RETENTION
+
+================================================================================
+11.1 MÉTRICAS — Al menos 2 de 5 puntos
+================================================================================
+
+[~] RED metrics por endpoint (Rate, Errors, Duration)
+    Parcial: backend/src/middleware/requestLogger.ts
+             (responseTime, statusCode, method, url en logs estructurados)
+    Nota: Datos disponibles en logs; agregar Prometheus/Datadog custom metrics en DevOps.
+
+[ ] USE metrics de infraestructura
+    Pendiente DevOps: CPU, memoria, saturación (requiere agente infra).
+
+[✓] Business metrics (eventos de negocio)
+    Backend:  backend/src/application/authService.ts (login_success, user_registered)
+              backend/src/application/pointsService.ts (points_added)
+              backend/src/application/rewardsService.ts (reward_redeemed)
+    Frontend: frontend/src/pages/LoginPage.tsx → LOGIN_SUCCESS
+              frontend/src/pages/RegisterPage.tsx → USER_REGISTERED
+              frontend/src/pages/RewardsPage.tsx → REWARD_REDEEMED
+              frontend/src/pages/TransactionsPage.tsx → TRANSACTIONS_VIEWED
+              frontend/src/pages/DashboardPage.tsx → Points Added
+
+[ ] Dashboard Grafana/Datadog en tiempo real
+    Pendiente DevOps: configurar dashboards en panel Datadog.
+
+[ ] Métricas de BD (conexiones, query duration, deadlocks)
+    Parcial: backend/src/infrastructure/mongo.ts (MONGO_DEBUG)
+    Pendiente DevOps: PostgreSQL/Mongo exporters.
+
+================================================================================
+2.2 CONFIGURACIÓN TYPESCRIPT PARA CALIDAD — Los 7 puntos
+================================================================================
+
+[✓] tsconfig.json con strict: true
+    Backend:  backend/tsconfig.json
+    Frontend: frontend/tsconfig.json
+
+[✓] noImplicitAny: true
+    Backend:  backend/tsconfig.json (incluido en strict: true, explícito)
+    Frontend: frontend/tsconfig.json
+
+[✓] strictNullChecks: true
+    Backend:  backend/tsconfig.json (incluido en strict: true)
+    Frontend: frontend/tsconfig.json
+
+[✓] noUnusedLocals y noUnusedParameters: true
+    Backend:  backend/tsconfig.json
+    Frontend: frontend/tsconfig.json
+
+[✓] ESLint con @typescript-eslint/recommended
+    Backend:  backend/eslint.config.js
+    Frontend: frontend/eslint.config.js
+
+[✓] Prettier integrado con ESLint
+    Backend:  backend/eslint.config.js + backend/.prettierrc
+    Frontend: frontend/eslint.config.js + frontend/.prettierrc
+
+[✓] Regla no-explicit-any activa en ESLint
+    Backend:  backend/eslint.config.js → @typescript-eslint/no-explicit-any: error
+    Frontend: frontend/eslint.config.js → @typescript-eslint/no-explicit-any: error
+
+================================================================================
+2.3 COBERTURA MÍNIMA SUGERIDA
+================================================================================
+
+    Configuración: backend/vitest.config.mjs
+    Comando:       npm run test:coverage (en backend/)
+    File                         | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s          
+-----------------------------|---------|----------|---------|---------|----------------------------
+All files                    |   83.75 |    58.58 |   87.69 |   83.68 |                            
+ application                 |   93.25 |    76.66 |     100 |   93.25 |                            
+  authService.ts             |      92 |    77.77 |     100 |      92 | 53,66-67,73                
+  pointsService.ts           |    87.5 |       50 |     100 |    87.5 | 24,37                      
+  rewardsService.ts          |     100 |     87.5 |     100 |     100 | 61                         
+  storesService.ts           |     100 |      100 |     100 |     100 |                            
+ controllers                 |   75.82 |    36.36 |     100 |   75.82 |                            
+  authController.ts          |   76.31 |    33.33 |     100 |   76.31 | 17-18,34,48-49,58-59,66,72 
+  pointsController.ts        |   76.19 |       40 |     100 |   76.19 | 10-11,20,28-29             
+  rewardsController.ts       |   69.23 |    35.71 |     100 |   69.23 | 20-21,24,27-28,34,50-51    
+  storesController.ts        |     100 |       50 |     100 |     100 | 11                         
+ domain                      |     100 |      100 |     100 |     100 |                            
+  errors.ts                  |     100 |      100 |     100 |     100 |                            
+  points.ts                  |     100 |      100 |     100 |     100 |                            
+  rewards.ts                 |     100 |      100 |     100 |     100 |                            
+  validation.ts              |     100 |      100 |     100 |     100 |                            
+ infrastructure/repositories |   65.62 |       40 |   63.63 |   65.62 |                            
+  index.ts                   |   65.62 |       40 |   63.63 |   65.62 | 24-28,40-55,96,141-158    
+
+    Capa dominio (90%):         backend/src/domain/
+    Capa aplicación (80%):      backend/src/application/
+    Capa controllers (70%):     backend/src/controllers/
+    Capa infraestructura (60%): backend/src/infrastructure/repositories/
+    Cobertura global (75%):     thresholds en vitest.config.ts
+
+================================================================================
+3.1 QUÉ PROBAR CON UNIT TESTS — Unidades con tests
+================================================================================
+
+[✓] Funciones de lógica de negocio pura
+    Tests:    backend/src/domain/points.test.ts
+              backend/src/domain/rewards.test.ts
+              backend/src/domain/validation.test.ts
+              backend/src/domain/errors.test.ts
+              backend/src/logger/redact.test.ts
+              frontend/src/lib/redact.test.ts
+
+[✓] Servicios / casos de uso
+    backend/src/application/authService.ts    → authService.test.ts
+    backend/src/application/pointsService.ts  → pointsService.test.ts
+    backend/src/application/rewardsService.ts → rewardsService.test.ts
+    backend/src/application/storesService.ts  → storesService.test.ts
+
+[✓] Controllers (presentación)
+    backend/src/controllers/authController.test.ts
+    backend/src/controllers/pointsController.test.ts
+    backend/src/controllers/rewardsController.test.ts
+    backend/src/controllers/storesController.test.ts
+
+[✓] Repositorios (infraestructura, mockeados)
+    backend/src/infrastructure/repositories/index.test.ts
+
+================================================================================
+3.2 BUENAS PRÁCTICAS DE UNIT TESTING EN TYPESCRIPT — Los 5 puntos
+================================================================================
+
+[✓] Patrón Arrange-Act-Assert (AAA) explícito
+    Todos los archivos *.test.ts en backend/src/ y frontend/src/
+
+[✓] Nombres descriptivos describe > describe > it
+    Ejemplo: backend/src/application/authService.test.ts
+             describe('AuthService') > describe('login') > describe('cuando...')
+
+[✓] Un test, una sola aserción (o un solo concepto)
+    Todos los tests usan expect() único por it()
+
+[✓] Sin lógica if/else ni bucles dentro de tests
+    Verificado en todos los *.test.ts
+
+[✓] Tests independientes (sin dependencia de orden)
+    beforeEach/vi.clearAllMocks en api.test.ts; mocks aislados por test
+
+================================================================================
+4.1 PRUEBAS DE LA API REST — Al menos 5 puntos del checklist
+================================================================================
+
+    Archivo: backend/src/controllers/api.test.ts (Vitest + Supertest)
+
+[✓] GET  /api/health           → 200 status ok
+[✓] POST /api/auth/register    → 201 registro exitoso
+[✓] POST /api/auth/login       → 401 credenciales inválidas
+[✓] GET  /api/points/balance   → 401 sin token
+[✓] Correlation ID             → header X-Correlation-ID propagado
+
+================================================================================
+MIGRACIÓN JAVASCRIPT → TYPESCRIPT
+================================================================================
+
+    Todos los archivos .js del backend fueron migrados a .ts:
+
+    backend/src/index.ts
+    backend/src/app.ts
+    backend/src/logger/logger.ts
+    backend/src/logger/redact.ts
+    backend/src/middleware/*.ts
+    backend/src/config/loggingPolicy.ts
+    backend/src/infrastructure/*.ts
+    backend/src/domain/*.ts
+    backend/src/application/*.ts
+    backend/src/controllers/*.ts
+    backend/src/routes/*.ts
+    backend/src/models/mongo/index.ts
+    backend/src/types/*.ts
+
+    Frontend ya estaba en TypeScript (.tsx / .ts).
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+    Backend:
+      npm run dev           → servidor TypeScript (tsx)
+      npm run build         → compilar a dist/
+      npm test              → unit + API tests
+      npm run test:coverage → cobertura con thresholds
+      npm run lint          → ESLint
+
+    Frontend:
+      npm run dev
+      npm test
+      npm run test:coverage
+      npm run lint
+
+================================================================================

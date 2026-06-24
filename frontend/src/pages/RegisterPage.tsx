@@ -1,7 +1,7 @@
 import { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { datadogLogs } from '@datadog/browser-logs';
+import { logEvent } from '../lib/datadog';
 
 const RegisterPage: FC = () => {
   const [name, setName]         = useState('');
@@ -13,10 +13,7 @@ const RegisterPage: FC = () => {
   async function handleSubmit() {
     const ok = await register(name, email, password);
   if (ok) {
-    datadogLogs.logger.info('USER_REGISTERED', {
-      name,
-      email
-    });
+    logEvent('USER_REGISTERED', { userAction: 'register' });
 
     navigate('/login');
   }
@@ -41,24 +38,24 @@ const RegisterPage: FC = () => {
 
         <div className="card fade-up-2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {error && (
-            <div style={{
+            <div data-testid="register-error" style={{
               background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)',
               borderRadius: 8, color: 'var(--danger)', fontSize: 13, padding: '10px 14px',
             }}>{error}</div>
           )}
           {[
-            { label: 'Nombre completo', placeholder: 'Juan García', value: name, set: setName, type: 'text' },
-            { label: 'Email', placeholder: 'tu@email.com', value: email, set: setEmail, type: 'email' },
-            { label: 'Contraseña', placeholder: '••••••••', value: password, set: setPassword, type: 'password' },
-          ].map(({ label, placeholder, value, set, type }) => (
+            { label: 'Nombre completo', placeholder: 'Juan García', value: name, set: setName, type: 'text', testId: 'register-name' },
+            { label: 'Email', placeholder: 'tu@email.com', value: email, set: setEmail, type: 'email', testId: 'register-email' },
+            { label: 'Contraseña', placeholder: '••••••••', value: password, set: setPassword, type: 'password', testId: 'register-password' },
+          ].map(({ label, placeholder, value, set, type, testId }) => (
             <div key={label}>
               <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>{label}</label>
-              <input type={type} placeholder={placeholder} value={value}
+              <input data-testid={testId} type={type} placeholder={placeholder} value={value}
                 onChange={e => set(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
             </div>
           ))}
-          <button className="btn-gold" onClick={handleSubmit} disabled={loading} style={{ marginTop: 8 }}>
+          <button data-testid="register-submit" className="btn-gold" onClick={handleSubmit} disabled={loading} style={{ marginTop: 8 }}>
             {loading ? 'Creando cuenta...' : 'Crear cuenta →'}
           </button>
         </div>

@@ -52,7 +52,7 @@ const Navbar: FC = () => {
           }}>{l.label}</Link>
         ))}
       </div>
-      <button className="btn-outline" onClick={logout} style={{ padding: '8px 16px', fontSize: 12 }}>
+      <button data-testid="logout-button" className="btn-outline" onClick={logout} style={{ padding: '8px 16px', fontSize: 12 }}>
         Salir
       </button>
     </nav>

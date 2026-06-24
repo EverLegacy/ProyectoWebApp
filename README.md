@@ -1,20 +1,20 @@
-# PuntosApp 🎯
+# PuntosApp 
 
 Aplicación web de tarjeta de puntos similar a Spin Premia / OXXO Premia. Los usuarios acumulan puntos al realizar compras en tiendas participantes y los canjean por recompensas.
 
 ---
 
-## 👥 Equipo
+##  Equipo
 
 > Elena Isabel Espriella Bustamante - Adrian Moises Martinez Hernandez - Frida Julieta Gonzalez Mena
 
-## 🔗 Repositorio
+##  Repositorio
 
 > https://github.com/EverLegacy/ProyectoWebApp
 
 ---
 
-## 🌐 Demo
+##  Demo
 
 | Servicio | URL |
 |----------|-----|
@@ -30,7 +30,7 @@ Aplicación web de tarjeta de puntos similar a Spin Premia / OXXO Premia. Los us
 
 ---
 
-## 🏗️ Arquitectura del proyecto
+##  Arquitectura del proyecto
 
 ```
 loyalty-app/
@@ -41,16 +41,18 @@ loyalty-app/
 │       ├── hooks/          useAuth
 │       ├── services/       axios API client
 │       └── types/          TypeScript interfaces
-└── backend/        Node.js + Express (REST API)
+└── backend/        Node.js + Express + TypeScript (REST API)
     └── src/
-        ├── config/         PostgreSQL + MongoDB connections
-        ├── controllers/    auth, points, rewards, stores
-        ├── middleware/      JWT auth
-        ├── models/
-        │   ├── postgres/   schema.sql, seed.sql
-        │   └── mongo/      ActivityLog, Notification, RewardCatalog,
-        │                   UserSession, StoreAnalytics, AppConfig
-        └── routes/         auth, points, rewards, stores
+        ├── domain/           Lógica de negocio pura
+        ├── application/      Servicios / casos de uso
+        ├── infrastructure/   PostgreSQL, MongoDB, repositorios
+        ├── controllers/      Controladores HTTP
+        ├── middleware/       JWT auth, logging, correlation ID
+        ├── logger/           Winston (JSON + redacción PII)
+        ├── routes/           auth, points, rewards, stores
+        └── models/
+            ├── postgres/     schema.sql, seed.sql
+            └── mongo/        ActivityLog, Notification, etc.
 ```
 
 ### Stack tecnológico
@@ -58,14 +60,17 @@ loyalty-app/
 | Capa | Tecnología |
 |------|-----------|
 | Frontend | React 18 + TypeScript (Vite) |
-| Backend | Node.js + Express |
+| Backend | Node.js + Express + TypeScript |
 | BD Relacional | PostgreSQL |
 | BD No-Relacional | MongoDB |
 | Autenticación | JWT (JSON Web Tokens) |
+| Logging backend | Winston (JSON estructurado) |
+| Logging frontend | Datadog Browser Logs |
+| APM backend | dd-trace (Datadog) |
 
 ---
 
-## 🗄️ Bases de datos
+##  Bases de datos
 
 ### PostgreSQL — 6 tablas relacionales
 
@@ -89,7 +94,7 @@ loyalty-app/
 | `store_analytics` | Resumen diario de ventas y puntos emitidos por tienda |
 | `app_config` | Configuración dinámica (multiplicadores de puntos, niveles) |
 
-**Total: 12 tablas/colecciones** ✅
+**Total: 12 tablas/colecciones** 
 
 ### Datos de prueba incluidos
 
@@ -112,7 +117,7 @@ loyalty-app/
 
 ---
 
-## 🚀 Cómo correr el proyecto
+## Cómo correr el proyecto
 
 ### Requisitos previos
 
@@ -139,6 +144,10 @@ Editar `.env` con tus credenciales:
 
 ```env
 PORT=3000
+LOG_LEVEL=info
+LOG_FORMAT=pretty
+NODE_ENV=development
+
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=loyalty_db
@@ -147,6 +156,11 @@ POSTGRES_PASSWORD=tu_password
 MONGO_URI=mongodb://localhost:27017/loyalty_logs
 JWT_SECRET=secreto123
 JWT_EXPIRES_IN=7d
+
+# Opcional — enviar logs del backend a Datadog (además de la terminal)
+# DD_API_KEY=tu_api_key_de_datadog
+DD_SITE=us5.datadoghq.com
+DD_SERVICE=loyalty-app-api
 ```
 
 Crear la base de datos e inicializar tablas:
@@ -162,6 +176,15 @@ Iniciar el servidor:
 ```bash
 npm run dev
 # Corre en http://localhost:3000
+# Verás logs en la terminal al arrancar y en cada request HTTP
+```
+
+Otros comandos útiles:
+
+```bash
+npm run build   # compila TypeScript a dist/
+npm start       # ejecuta dist/index.js (producción)
+npm test        # pruebas unitarias (Vitest)
 ```
 
 ### 3. Frontend
@@ -175,7 +198,55 @@ npm run dev
 
 ---
 
-## 🔐 Autenticación
+##  Observabilidad y logs
+
+### Backend (terminal)
+
+Al correr `npm run dev` deberías ver logs como:
+
+```
+2026-06-22T23:35:00.961Z info: postgres_connected {"service":"loyalty-app-api"}
+2026-06-22T23:35:01.120Z info: mongodb_connected {"service":"loyalty-app-api"}
+2026-06-22T23:35:01.125Z info: server_started {"port":3000,"env":"development","service":"loyalty-app-api"}
+2026-06-22T23:35:05.200Z info: http_request {"type":"http_request","correlationId":"...","method":"GET","url":"/api/health","statusCode":200,"responseTime":2}
+```
+
+Variables de entorno relevantes:
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `LOG_LEVEL` | `error`, `warn`, `info`, `debug` | `info` |
+| `LOG_FORMAT` | `pretty` (legible) o `json` (una línea JSON) | `pretty` en dev |
+
+Cada request incluye `X-Correlation-ID` para trazabilidad end-to-end con el frontend.
+
+### Backend (Datadog)
+
+1. Crea una **API Key** en Datadog (Organization Settings → API Keys).
+2. Agrega en `backend/.env`:
+   ```env
+   DD_API_KEY=tu_api_key
+   DD_SITE=us5.datadoghq.com
+   ```
+3. Reinicia el backend. Los logs se envían a **Logs → Explorer** con `service:loyalty-app-api`.
+
+Sin `DD_API_KEY`, los logs solo aparecen en la terminal (stdout).
+
+### Frontend (Datadog Browser Logs)
+
+El frontend envía eventos de negocio (`LOGIN_SUCCESS`, `USER_REGISTERED`, etc.) a Datadog vía `@datadog/browser-logs`. Se inicializa en `frontend/src/lib/datadog.ts` al abrir la app.
+
+Opcional en `frontend/.env`:
+
+```env
+VITE_DATADOG_CLIENT_TOKEN=tu_client_token
+```
+
+Ver logs en Datadog: **Logs → Explorer**, filtrar por `@service:loyalty-app-api` (backend) o por el sitio Browser Logs (frontend).
+
+---
+
+##  Autenticación
 
 La API usa **JWT (Bearer Token)**. Para acceder a rutas protegidas incluir el header:
 
@@ -215,6 +286,6 @@ El token se obtiene al hacer login en `POST /api/auth/login`. No se requiere acc
 
 ---
 
-## 👥 Equipo
+##  Equipo
 
 > Elena Isabel Espriella Bustamante - Adrian Moises Martinez Hernandez - Frida Julieta Gonzalez Mena

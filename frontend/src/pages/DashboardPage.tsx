@@ -91,7 +91,7 @@ logEvent('Points Added', {
           <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 4 }}>Hola de nuevo,</p>
           <h1 style={{ fontSize: 32 }}>{user?.name ?? 'Usuario'} {tierEmoji[tier]}</h1>
         </div>
-        <button className="btn-gold" onClick={() => { setShowScan(true); setScanMsg(null); }}
+        <button data-testid="simulate-purchase-button" className="btn-gold" onClick={() => { setShowScan(true); setScanMsg(null); }}
           style={{ width: 'auto', padding: '12px 24px', marginTop: 8 }}>
           + Simular compra
         </button>
@@ -187,7 +187,7 @@ logEvent('Points Added', {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Tienda</label>
-                <select value={storeId} onChange={e => setStoreId(e.target.value)} style={{
+                <select data-testid="scan-store-select" value={storeId} onChange={e => setStoreId(e.target.value)} style={{
                   background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8,
                   color: 'var(--text)', fontFamily: 'DM Sans', fontSize: 15,
                   outline: 'none', padding: '14px 16px', width: '100%',
@@ -198,7 +198,7 @@ logEvent('Points Added', {
               </div>
               <div>
                 <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Monto de compra ($)</label>
-                <input type="number" placeholder="Ej. 150" value={amount}
+                <input data-testid="scan-amount-input" type="number" placeholder="Ej. 150" value={amount}
                   onChange={e => setAmount(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleScan()} />
               </div>
@@ -210,7 +210,7 @@ logEvent('Points Added', {
                   Ganarás <strong>{Math.floor(Number(amount))} puntos</strong> con esta compra
                 </div>
               )}
-              <button className="btn-gold" onClick={handleScan}
+              <button data-testid="scan-submit" className="btn-gold" onClick={handleScan}
                 disabled={scanning || !storeId || !amount} style={{ marginTop: 4 }}>
                 {scanning ? 'Registrando...' : 'Registrar compra →'}
               </button>

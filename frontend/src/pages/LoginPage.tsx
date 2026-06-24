@@ -1,7 +1,7 @@
 import { FC, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { datadogLogs } from '@datadog/browser-logs';
+import { logEvent } from '../lib/datadog';
 
 const LoginPage: FC = () => {
   const [email, setEmail]       = useState('');
@@ -12,9 +12,7 @@ const LoginPage: FC = () => {
   async function handleSubmit() {
     const ok = await login(email, password);
 if (ok) {
-    datadogLogs.logger.info('LOGIN_SUCCESS', {
-      email
-    });
+    logEvent('LOGIN_SUCCESS', { userAction: 'login' });
 
     navigate('/dashboard');
   }
@@ -44,24 +42,29 @@ if (ok) {
 
         <div className="card fade-up-2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {error && (
-            <div style={{
+            <div data-testid="login-error" style={{
               background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)',
               borderRadius: 8, color: 'var(--danger)', fontSize: 13, padding: '10px 14px',
             }}>{error}</div>
           )}
           <div>
             <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Email</label>
-            <input type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)}
+            <input data-testid="login-email" type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
           <div>
             <label style={{ color: 'var(--muted)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Contraseña</label>
-            <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+            <input data-testid="login-password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
-          <button className="btn-gold" onClick={handleSubmit} disabled={loading} style={{ marginTop: 8 }}>
+          <button data-testid="login-submit" className="btn-gold" onClick={handleSubmit} disabled={loading} style={{ marginTop: 8 }}>
             {loading ? 'Cargando...' : 'Iniciar sesión →'}
           </button>
+          <p style={{ textAlign: 'center' }}>
+            <Link to="/forgot-password" data-testid="forgot-password-link" style={{ color: 'var(--muted)', fontSize: 12 }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
         </div>
 
         <p className="fade-up-3" style={{ color: 'var(--muted)', fontSize: 13, marginTop: 24, textAlign: 'center' }}>

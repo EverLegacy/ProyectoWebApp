@@ -2,7 +2,7 @@ import { FC, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { LoyaltyCard } from '../types';
-import { datadogLogs } from '@datadog/browser-logs';
+import { logEvent } from '../lib/datadog';
 
 interface Redemption {
   id: number;
@@ -18,14 +18,14 @@ const TransactionsPage: FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-      datadogLogs.logger.info('TRANSACTIONS_VIEWED');
+      logEvent('TRANSACTIONS_VIEWED');
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
     api.get<LoyaltyCard>('/points/balance')
       .then(r => setCard(r.data))
       .catch(() => navigate('/login'))
       .finally(() => setLoading(false));
-    // Redemptions would need a dedicated endpoint — showing empty state for now
+    
     setRedemptions([]);
   }, [navigate]);
 

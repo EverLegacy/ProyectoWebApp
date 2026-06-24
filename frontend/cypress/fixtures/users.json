@@ -1,0 +1,15 @@
+{
+  "newUser": {
+    "name": "Cypress Test User",
+    "email": "cypress.test@example.com",
+    "password": "TestPass123!"
+  },
+  "invalidLogin": {
+    "email": "doesnotexist@example.com",
+    "password": "wrongpassword"
+  },
+  "admin": {
+    "email": "isa@gmail.com",
+    "password": "root"
+  }
+}

@@ -26,12 +26,7 @@ https://loyalty-app-frontend-6jdo.onrender.com
 
 ### Acceso de prueba
 
-| Campo | Valor |
-|-------|-------|
-| Email | email@email.com |
-| Contraseña | root |
-
----
+El usuario seed actualmente no tiene contraseña funcional (ver BUG-008). Regístrate en /register para crear una cuenta de prueba real con una contraseña de mas de 6 caracteres.
 
 ##  Arquitectura del proyecto
 
@@ -40,7 +35,8 @@ loyalty-app/
 ├── frontend/       React + TypeScript (Vite)
 │   └── src/
 │       ├── components/     Navbar
-│       ├── pages/          Login, Register, Dashboard, Rewards, Transactions
+│       ├── pages/          Login, Register, Dashboard, Rewards, Transactions,
+│       │                   ForgotPassword, ResetPassword
 │       ├── hooks/          useAuth
 │       ├── services/       axios API client
 │       └── types/          TypeScript interfaces
@@ -157,7 +153,7 @@ POSTGRES_DB=loyalty_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=tu_password
 MONGO_URI=mongodb://localhost:27017/loyalty_logs
-JWT_SECRET=secreto123
+JWT_SECRET=change_this_secret
 JWT_EXPIRES_IN=7d
 
 # Opcional — enviar logs del backend a Datadog (además de la terminal)
@@ -269,6 +265,8 @@ El token se obtiene al hacer login en `POST /api/auth/login`. No se requiere acc
 | POST | `/api/auth/register` | Crear cuenta nueva | No |
 | POST | `/api/auth/login` | Iniciar sesión, devuelve JWT | No |
 | GET  | `/api/auth/me` | Info del usuario autenticado | Sí |
+| POST | `/api/auth/forgot-password` | Solicitar token de recuperación de contraseña | No |
+| POST | `/api/auth/reset-password` | Restablecer contraseña con token | No |
 
 ### Puntos
 | Método | Ruta | Descripción | Auth requerido |
